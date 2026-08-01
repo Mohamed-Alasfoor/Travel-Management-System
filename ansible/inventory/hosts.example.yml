@@ -1,0 +1,7 @@
+all:
+  children:
+    travel_plan_hosts:
+      hosts:
+        app.example.com:
+          ansible_user: deploy
+

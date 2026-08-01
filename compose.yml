@@ -1,0 +1,151 @@
+name: travel-plan
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    ports: ["8080:8080"]
+    environment:
+      USER_SERVICE_URL: http://user-service:8081
+      TRAVEL_SERVICE_URL: http://travel-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8083
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-must-be-at-least-32-bytes-long}
+    depends_on:
+      user-service: { condition: service_healthy }
+      travel-service: { condition: service_healthy }
+      payment-service: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [edge, internal]
+
+  user-service:
+    build: { context: ., dockerfile: services/user-service/Dockerfile }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/users_db
+      DB_USERNAME: users_app
+      DB_PASSWORD: users_dev_only
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-must-be-at-least-32-bytes-long}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-admin123}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-System Administrator}
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck: &service-health
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [internal]
+    deploy:
+      replicas: 2
+
+  travel-service:
+    build: { context: ., dockerfile: services/travel-service/Dockerfile }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/travels_db
+      DB_USERNAME: travels_app
+      DB_PASSWORD: travels_dev_only
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      <<: *service-health
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+    networks: [internal]
+    deploy:
+      replicas: 2
+
+  payment-service:
+    build: { context: ., dockerfile: services/payment-service/Dockerfile }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/payments_db
+      DB_USERNAME: payments_app
+      DB_PASSWORD: payments_dev_only
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      <<: *service-health
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+    networks: [internal]
+    deploy:
+      replicas: 2
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-travel_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-travel_dev_only}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  neo4j:
+    image: neo4j:5.26-community
+    environment:
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/neo4j_dev_only}
+    volumes:
+      - neo4j-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    networks: [internal]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [internal]
+
+  loki:
+    image: grafana/loki:3.5.3
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ./infra/loki/config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  promtail:
+    image: grafana/promtail:3.5.3
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ./infra/promtail/config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      loki: { condition: service_healthy }
+    networks: [internal]
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    ports: ["3000:3000"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GF_SECURITY_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:-admin_dev_only}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks: [edge, internal]
+
+networks:
+  edge: {}
+  internal:
+    internal: true
+volumes:
+  postgres-data: {}
+  neo4j-data: {}
+  grafana-data: {}
+  loki-data: {}

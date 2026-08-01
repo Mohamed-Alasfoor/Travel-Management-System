@@ -1,0 +1,33 @@
+package com.travelplan.travels;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class TravelServicePersistenceTest {
+
+    @Autowired
+    private TravelService travelService;
+
+    @Autowired
+    private TravelRepository travelRepository;
+
+    @Test
+    void createPersistsTravelToTheRepository() {
+        var created = travelService.create(new TravelContracts.CreateRequest(
+                "Paris",
+                "2026-09-01",
+                5,
+                "Museum",
+                "Hotel",
+                "Train"));
+
+        assertThat(created.id()).isNotNull();
+        assertThat(travelRepository.findById(created.id())).isPresent();
+    }
+}
