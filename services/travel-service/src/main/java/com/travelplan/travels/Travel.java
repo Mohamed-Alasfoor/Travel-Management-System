@@ -85,11 +85,12 @@ class Travel {
         transportation,
         null,
         LocalDate.now().plusDays(30),
-        LocalDate.now().plusDays(30 + durationDays),
+        LocalDate.now().plusDays(30L + durationDays),
         BigDecimal.ZERO,
         100);
   }
 
+  @SuppressWarnings("java:S107") // The constructor maps the complete persisted travel offering.
   Travel(
       String destination,
       String dates,
@@ -196,6 +197,7 @@ class Travel {
     this.updatedAt = Instant.now();
   }
 
+  @SuppressWarnings("java:S107") // The command updates the complete travel offering atomically.
   void updateOffering(
       String destination,
       String dates,

@@ -4,6 +4,8 @@ import java.net.URI;
 import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.*;
@@ -11,6 +13,7 @@ import tools.jackson.databind.node.*;
 
 @Service
 class SearchService {
+  private static final Logger LOG = LoggerFactory.getLogger(SearchService.class);
   private final String elastic;
   private final TravelClient travels;
   private final ObjectMapper mapper;
@@ -57,16 +60,25 @@ class SearchService {
       for (JsonNode hit : hits)
         result.add(mapper.treeToValue(hit.path("_source"), TravelClient.TravelView.class));
       return result;
-    } catch (Exception e) {
-      return Arrays.stream(all)
-          .filter(
-              t ->
-                  contains(t.destination(), query)
-                      || contains(t.activities(), query)
-                      || contains(t.accommodation(), query)
-                      || contains(t.transportation(), query))
-          .toList();
+    } catch (InterruptedException exception) {
+      Thread.currentThread().interrupt();
+      LOG.warn("Elasticsearch search was interrupted; using the local fallback", exception);
+      return fallback(all, query);
+    } catch (Exception exception) {
+      LOG.warn("Elasticsearch search failed; using the local fallback", exception);
+      return fallback(all, query);
     }
+  }
+
+  private List<TravelClient.TravelView> fallback(TravelClient.TravelView[] all, String query) {
+    return Arrays.stream(all)
+        .filter(
+            t ->
+                contains(t.destination(), query)
+                    || contains(t.activities(), query)
+                    || contains(t.accommodation(), query)
+                    || contains(t.transportation(), query))
+        .toList();
   }
 
   List<String> autocomplete(String query, String token) {
@@ -92,7 +104,12 @@ class SearchService {
                         mapper.writeValueAsString(t), StandardCharsets.UTF_8))
                 .build();
         http.send(req, HttpResponse.BodyHandlers.discarding());
-      } catch (Exception ignored) {
+      } catch (InterruptedException exception) {
+        Thread.currentThread().interrupt();
+        LOG.warn("Elasticsearch indexing was interrupted", exception);
+        return;
+      } catch (Exception exception) {
+        LOG.warn("Could not index travel {}", t.id(), exception);
       }
   }
 }

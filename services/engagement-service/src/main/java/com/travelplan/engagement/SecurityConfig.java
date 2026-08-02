@@ -23,8 +23,10 @@ class SecurityConfig {
   }
 
   @Bean
-  @SuppressWarnings(
-      "java:S4502") // Stateless bearer-token API; browsers never authenticate with cookies.
+  @SuppressWarnings({
+    "java:S4502",
+    "java:S112"
+  }) // Spring declares Exception; stateless bearer tokens do not use CSRF cookies.
   SecurityFilterChain chain(HttpSecurity http) throws Exception {
     JwtGrantedAuthoritiesConverter roles = new JwtGrantedAuthoritiesConverter();
     roles.setAuthoritiesClaimName("roles");

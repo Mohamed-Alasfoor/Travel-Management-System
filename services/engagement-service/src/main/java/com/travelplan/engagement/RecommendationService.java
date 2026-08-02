@@ -2,10 +2,13 @@ package com.travelplan.engagement;
 
 import java.util.*;
 import org.neo4j.driver.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 class RecommendationService {
+  private static final Logger LOG = LoggerFactory.getLogger(RecommendationService.class);
   private final Driver driver;
 
   RecommendationService(Driver driver) {
@@ -47,7 +50,8 @@ class RecommendationService {
                 .consume();
             return null;
           });
-    } catch (Exception ignored) {
+    } catch (Exception exception) {
+      LOG.warn("Could not update the recommendation graph", exception);
     }
   }
 
@@ -65,7 +69,8 @@ class RecommendationService {
                           + " ORDER BY score DESC LIMIT 10",
                       Values.parameters("uid", user.toString()))
                   .list(r -> UUID.fromString(r.get("id").asString())));
-    } catch (Exception ignored) {
+    } catch (Exception exception) {
+      LOG.warn("Could not query the recommendation graph", exception);
       return List.of();
     }
   }
