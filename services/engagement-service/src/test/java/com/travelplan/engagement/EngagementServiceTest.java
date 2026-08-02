@@ -87,17 +87,17 @@ class EngagementServiceTest {
   }
 
   @Test
-  void participantCanLeaveFeedbackOnlyAfterTravel() {
+  void activeParticipantCanLeaveFeedbackBeforeTravelEnds() {
     UUID user = UUID.randomUUID(), travelId = UUID.randomUUID(), manager = UUID.randomUUID();
     var travel =
         new TravelClient.TravelView(
             travelId,
             manager,
-            LocalDate.now().minusDays(8),
-            LocalDate.now().minusDays(2),
+            LocalDate.now().plusDays(10),
+            LocalDate.now().plusDays(15),
             BigDecimal.TEN,
             5,
-            "COMPLETED",
+            "PUBLISHED",
             "Rome",
             "Food",
             "Hotel",

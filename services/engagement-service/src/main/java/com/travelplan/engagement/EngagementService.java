@@ -98,8 +98,6 @@ public class EngagementService {
             .findByTravelIdAndTravelerId(req.travelId(), user)
             .filter(x -> x.status() == Subscription.Status.ACTIVE)
             .orElseThrow(() -> new IllegalStateException("Only participants can leave feedback."));
-    if (!travel.endDate().isBefore(LocalDate.now()))
-      throw new IllegalStateException("Feedback is available after the travel ends.");
     if (feedback.existsByTravelIdAndTravelerId(req.travelId(), user))
       throw new IllegalStateException("Feedback already submitted.");
     Feedback saved =

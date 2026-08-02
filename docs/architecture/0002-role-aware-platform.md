@@ -10,7 +10,7 @@ The second release adds administrator, travel-manager, and traveler experiences;
 
 Keep account and itinerary ownership in the existing user and travel services. Add an engagement service that owns subscriptions, feedback, reports, statistics, and the integrations with Elasticsearch and Neo4j. The payment service owns idempotent transaction metadata and supports the enabled Stripe and PayPal sandbox boundaries without accepting card or wallet credentials.
 
-The gateway and every downstream service validate the same short-lived JWT. Managers may mutate only offerings they own. Traveler cancellation and manager removal use the same three-day cutoff. Feedback requires completed participation. Administrators receive aggregate rankings, income history, reports, feedback, and travel history.
+The gateway and every downstream service validate the same short-lived JWT. Managers may mutate only offerings they own. Traveler cancellation and manager removal use the same three-day cutoff. Feedback requires an active subscription, but can be submitted before or after departure so travelers can rate a manager during a trip. Administrators receive aggregate rankings, income history, reports, feedback, and travel history.
 
 Elasticsearch indexes destination, activities, accommodation, and transportation for autocomplete and multi-field search. Neo4j stores participation relationships and scores unseen travels using destination, activities, and accommodation similarity. PostgreSQL remains the source of truth.
 
