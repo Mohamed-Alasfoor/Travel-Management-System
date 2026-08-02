@@ -20,8 +20,8 @@ class PaymentServicePersistenceTest {
     @Test
     void createPersistsPaymentMethodToTheRepository() {
         var created = paymentService.create(new PaymentContracts.CreateRequest(
-                "Visa",
-                "card",
+                "Stripe Cards",
+                "STRIPE",
                 true));
 
         assertThat(created.id()).isNotNull();

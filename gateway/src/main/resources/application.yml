@@ -1,7 +1,16 @@
 spring:
+  config:
+    import: ${VAULT_CONFIG_IMPORT:optional:classpath:/vault-disabled.properties}
   application:
     name: gateway
   cloud:
+    vault:
+      enabled: ${VAULT_ENABLED:false}
+      uri: ${VAULT_URI:http://localhost:8200}
+      token: ${VAULT_TOKEN:test-disabled-token}
+      kv:
+        enabled: true
+        application-name: gateway
     gateway:
       server:
         webflux:

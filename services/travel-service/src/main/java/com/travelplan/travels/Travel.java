@@ -5,7 +5,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.List;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -31,6 +35,8 @@ class Travel {
     private Instant createdAt;
     @Column(nullable = false)
     private Instant updatedAt;
+    @OneToMany(mappedBy = "travel", cascade = CascadeType.ALL, orphanRemoval = true)
+    private final List<TravelDetail> details = new ArrayList<>();
 
     protected Travel() {
     }
@@ -43,6 +49,7 @@ class Travel {
         this.activities = activities;
         this.accommodation = accommodation;
         this.transportation = transportation;
+        replaceDetails(destination, activities, accommodation, transportation);
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
     }
@@ -65,6 +72,22 @@ class Travel {
         this.activities = activities;
         this.accommodation = accommodation;
         this.transportation = transportation;
+        replaceDetails(destination, activities, accommodation, transportation);
         this.updatedAt = Instant.now();
+    }
+
+    private void replaceDetails(String destination, String activities, String accommodation, String transportation) {
+        details.clear();
+        addCommaSeparatedDetails(TravelDetail.Type.DESTINATION, destination);
+        addCommaSeparatedDetails(TravelDetail.Type.ACTIVITY, activities);
+        addCommaSeparatedDetails(TravelDetail.Type.ACCOMMODATION, accommodation);
+        addCommaSeparatedDetails(TravelDetail.Type.TRANSPORTATION, transportation);
+    }
+
+    private void addCommaSeparatedDetails(TravelDetail.Type type, String values) {
+        for (String value : values.split(",")) {
+            String normalized = value.trim();
+            if (!normalized.isEmpty()) details.add(new TravelDetail(this, type, normalized));
+        }
     }
 }

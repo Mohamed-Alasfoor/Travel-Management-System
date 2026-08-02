@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
@@ -16,6 +17,9 @@ class TravelServicePersistenceTest {
 
     @Autowired
     private TravelRepository travelRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void createPersistsTravelToTheRepository() {
@@ -29,5 +33,16 @@ class TravelServicePersistenceTest {
 
         assertThat(created.id()).isNotNull();
         assertThat(travelRepository.findById(created.id())).isPresent();
+        assertThat(detailCount(created.id())).isEqualTo(4);
+
+        travelService.delete(created.id());
+
+        assertThat(travelRepository.findById(created.id())).isEmpty();
+        assertThat(detailCount(created.id())).isZero();
+    }
+
+    private int detailCount(java.util.UUID travelId) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM travel_details WHERE travel_id = ?", Integer.class, travelId);
     }
 }

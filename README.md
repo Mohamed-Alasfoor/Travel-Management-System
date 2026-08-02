@@ -12,6 +12,7 @@ Java 21 microservices and an admin dashboard for managing users, travel itinerar
 - Neo4j is isolated for the recommendation graph used by the next project phase.
 - Prometheus collects metrics; Grafana (`3000`) visualizes Prometheus metrics and centralized Loki logs.
 - Docker Compose runs two replicas of every business service. Docker DNS load-balances gateway requests across them.
+- HashiCorp Vault supplies application and database secrets in the local environment; production uses a non-development Vault auth method.
 - Jenkins, SonarQube, and Ansible provide CI quality gates and repeatable deployment.
 
 See [the architecture decision](docs/architecture/0001-system-foundation.md) and [manual setup checklist](docs/MANUAL_SETUP.md).
@@ -59,6 +60,12 @@ docker compose -f compose.ci.yml up --build --detach
 ```
 
 Jenkins is available at `http://localhost:8085` and SonarQube at `http://localhost:9000`. GitHub push webhooks can reach the local Jenkins endpoint through a temporary ngrok tunnel to port `8085`.
+
+For production HTTPS, set `DOMAIN` to a public DNS name and deploy with both Compose files. Caddy obtains and renews Let's Encrypt certificates automatically:
+
+```shell
+docker compose -f compose.yml -f compose.tls.yml up --build --detach
+```
 
 ## Useful operations
 

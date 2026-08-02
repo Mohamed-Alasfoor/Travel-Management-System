@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: docker
+    directory: "/gateway"
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: "/services/user-service"
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: "/services/travel-service"
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: "/services/payment-service"
+    schedule:
+      interval: weekly

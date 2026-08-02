@@ -6,7 +6,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class TravelServiceTest {
     @Test
@@ -26,5 +29,24 @@ class TravelServiceTest {
 
         assertThat(created.destination()).isEqualTo("Paris");
         verify(repository).save(any(Travel.class));
+    }
+
+    @Test
+    void updatesAndDeletesTravels() {
+        TravelRepository repository = mock(TravelRepository.class);
+        UUID id = UUID.randomUUID();
+        Travel travel = new Travel("Paris", "2026-10-01", 3, "Museum", "Hotel", "Train");
+        ReflectionTestUtils.setField(travel, "id", id);
+        when(repository.findById(id)).thenReturn(Optional.of(travel));
+        when(repository.save(travel)).thenReturn(travel);
+        TravelService service = new TravelService(repository);
+
+        var updated = service.update(id, new TravelContracts.UpdateRequest(
+                "Lyon", "2026-10-02", 4, "Food tour", "Apartment", "Rail"));
+        assertThat(updated.destination()).isEqualTo("Lyon");
+        assertThat(updated.durationDays()).isEqualTo(4);
+
+        service.delete(id);
+        verify(repository).delete(travel);
     }
 }

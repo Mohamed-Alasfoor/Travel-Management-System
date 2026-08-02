@@ -1,6 +1,16 @@
 spring:
+  config:
+    import: ${VAULT_CONFIG_IMPORT:optional:classpath:/vault-disabled.properties}
   application:
     name: travel-service
+  cloud:
+    vault:
+      enabled: ${VAULT_ENABLED:false}
+      uri: ${VAULT_URI:http://localhost:8200}
+      token: ${VAULT_TOKEN:test-disabled-token}
+      kv:
+        enabled: true
+        application-name: travel-service
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/travels_db}
     username: ${DB_USERNAME:travels_app}
@@ -23,4 +33,3 @@ management:
     health:
       probes:
         enabled: true
-
