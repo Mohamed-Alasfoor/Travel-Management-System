@@ -9,7 +9,7 @@ COPY services/engagement-service/pom.xml services/engagement-service/pom.xml
 RUN mvn -pl services/travel-service -am dependency:go-offline
 COPY services/travel-service/src services/travel-service/src
 RUN mvn -pl services/travel-service -am package -DskipTests
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 RUN useradd --system --uid 10001 travelplan
 USER travelplan
 COPY --from=build /workspace/services/travel-service/target/travel-service-*.jar /app.jar
