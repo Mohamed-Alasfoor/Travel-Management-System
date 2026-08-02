@@ -10,7 +10,7 @@ RUN mvn -pl gateway -am dependency:go-offline
 COPY gateway/src gateway/src
 RUN mvn -pl gateway -am package -DskipTests
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 RUN useradd --system --uid 10001 travelplan
 USER travelplan
 COPY --from=build /workspace/gateway/target/gateway-*.jar /app.jar
