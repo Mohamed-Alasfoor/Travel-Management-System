@@ -15,7 +15,7 @@ Java 21 microservices and an admin dashboard for managing users, travel itinerar
 - HashiCorp Vault supplies application and database secrets in the local environment; production uses a non-development Vault auth method.
 - Jenkins, SonarQube, and Ansible provide CI quality gates and repeatable deployment.
 
-See [the architecture decision](docs/architecture/0001-system-foundation.md) and [manual setup checklist](docs/MANUAL_SETUP.md).
+See [the architecture decision](docs/architecture/0001-system-foundation.md) for the system design and trade-offs.
 
 ## Local start
 
