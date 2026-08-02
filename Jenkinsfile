@@ -1,6 +1,5 @@
 pipeline {
     agent any
-    tools { jdk 'jdk-21'; maven 'maven-3.9' }
     options { timestamps(); disableConcurrentBuilds() }
     stages {
         stage('Build and test') {
@@ -8,7 +7,6 @@ pipeline {
             post { always { junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml' } }
         }
         stage('SonarQube') {
-            when { changeRequest() }
             steps {
                 withSonarQubeEnv('sonarqube') {
                     sh 'mvn --batch-mode sonar:sonar'
@@ -16,16 +14,20 @@ pipeline {
             }
         }
         stage('Quality gate') {
-            when { changeRequest() }
             steps { timeout(time: 10, unit: 'MINUTES') { waitForQualityGate abortPipeline: true } }
         }
         stage('Container validation') {
+            when { expression { sh(script: 'command -v docker >/dev/null 2>&1', returnStatus: true) == 0 } }
             steps { sh 'docker compose config --quiet' }
         }
         stage('Build containers') {
-            when { branch 'main' }
+            when {
+                allOf {
+                    branch 'main'
+                    expression { sh(script: 'command -v docker >/dev/null 2>&1', returnStatus: true) == 0 }
+                }
+            }
             steps { sh 'docker compose build' }
         }
     }
 }
-

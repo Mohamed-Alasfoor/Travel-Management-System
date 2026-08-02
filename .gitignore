@@ -6,4 +6,5 @@ target/
 .env
 *.log
 compose-validation.txt
+.ngrok.yml
 data/
