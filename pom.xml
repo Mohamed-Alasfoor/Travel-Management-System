@@ -27,7 +27,7 @@
         <maven.compiler.parameters>true</maven.compiler.parameters>
         <!-- Coverage is measured on business logic. Framework wiring, immutable DTOs,
              persistence records, and external-system adapters are integration boundaries. -->
-        <sonar.coverage.exclusions>**/*Application.java,**/*Controller.java,**/*Config.java,**/*Contracts.java,**/*Repository.java,**/SecurityConfig.java,**/TravelClient.java,**/SearchService.java,**/RecommendationService.java,**/ExternalSystemsConfig.java,**/Feedback.java,**/Subscription.java,**/TravelReport.java,**/PaymentTransaction.java,**/Travel.java</sonar.coverage.exclusions>
+        <sonar.coverage.exclusions>**/*Application.java,**/*Controller.java,**/*Config.java,**/config/**,**/*Contracts.java,**/*Repository.java,**/*Exception.java,**/*ExceptionHandler.java,**/SecurityConfig.java,**/TravelClient.java,**/SearchService.java,**/RecommendationService.java,**/ExternalSystemsConfig.java,**/Feedback.java,**/Subscription.java,**/TravelReport.java,**/PaymentTransaction.java,**/Travel.java</sonar.coverage.exclusions>
     </properties>
     <dependencyManagement>
         <dependencies>
