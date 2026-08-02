@@ -50,6 +50,16 @@ Without Maven:
 docker run --rm -v "${PWD}:/workspace" -w /workspace maven:3.9.11-eclipse-temurin-21 mvn --batch-mode clean verify
 ```
 
+## Local CI
+
+Start the isolated Jenkins and SonarQube stack with:
+
+```powershell
+docker compose -f compose.ci.yml up --build --detach
+```
+
+Jenkins is available at `http://localhost:8085` and SonarQube at `http://localhost:9000`. GitHub push webhooks can reach the local Jenkins endpoint through a temporary ngrok tunnel to port `8085`.
+
 ## Useful operations
 
 ```powershell
