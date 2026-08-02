@@ -64,6 +64,7 @@ docker compose -f compose.ci.yml up --build --detach
 ```
 
 Jenkins is available at `http://localhost:8085` and SonarQube at `http://localhost:9000`. GitHub push webhooks can reach the local Jenkins endpoint through a temporary ngrok tunnel to port `8085`.
+The ngrok process and the local Jenkins stack must both remain running while a webhook delivery is expected.
 
 For production HTTPS, set `DOMAIN` to a public DNS name and deploy with both Compose files. Caddy obtains and renews Let's Encrypt certificates automatically:
 
