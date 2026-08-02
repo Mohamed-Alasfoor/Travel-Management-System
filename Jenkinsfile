@@ -28,7 +28,7 @@ pipeline {
         stage('Build containers') {
             when {
                 allOf {
-                    branch 'main'
+                    expression { env.BRANCH_NAME == 'main' || env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main' }
                     expression { sh(script: 'command -v docker >/dev/null 2>&1', returnStatus: true) == 0 }
                 }
             }
@@ -37,7 +37,7 @@ pipeline {
         stage('Deploy') {
             when {
                 allOf {
-                    branch 'main'
+                    expression { env.BRANCH_NAME == 'main' || env.GIT_BRANCH == 'origin/main' || env.GIT_BRANCH == 'main' }
                     expression { env.DEPLOY_INVENTORY?.trim() }
                 }
             }
