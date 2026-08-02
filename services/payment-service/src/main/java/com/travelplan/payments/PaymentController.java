@@ -17,36 +17,38 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/payment-methods")
 public class PaymentController {
-    private final PaymentService service;
+  private final PaymentService service;
 
-    public PaymentController(PaymentService service) {
-        this.service = service;
-    }
+  public PaymentController(PaymentService service) {
+    this.service = service;
+  }
 
-    @GetMapping
-    public List<PaymentContracts.Response> findAll() {
-        return service.findAll();
-    }
+  @GetMapping
+  public List<PaymentContracts.Response> findAll() {
+    return service.findAll();
+  }
 
-    @GetMapping("/{id}")
-    public PaymentContracts.Response find(@PathVariable UUID id) {
-        return service.find(id);
-    }
+  @GetMapping("/{id}")
+  public PaymentContracts.Response find(@PathVariable UUID id) {
+    return service.find(id);
+  }
 
-    @PostMapping
-    public ResponseEntity<PaymentContracts.Response> create(@Valid @RequestBody PaymentContracts.CreateRequest request) {
-        PaymentContracts.Response created = service.create(request);
-        return ResponseEntity.created(URI.create("/api/payment-methods/" + created.id())).body(created);
-    }
+  @PostMapping
+  public ResponseEntity<PaymentContracts.Response> create(
+      @Valid @RequestBody PaymentContracts.CreateRequest request) {
+    PaymentContracts.Response created = service.create(request);
+    return ResponseEntity.created(URI.create("/api/payment-methods/" + created.id())).body(created);
+  }
 
-    @PutMapping("/{id}")
-    public PaymentContracts.Response update(@PathVariable UUID id, @Valid @RequestBody PaymentContracts.UpdateRequest request) {
-        return service.update(id, request);
-    }
+  @PutMapping("/{id}")
+  public PaymentContracts.Response update(
+      @PathVariable UUID id, @Valid @RequestBody PaymentContracts.UpdateRequest request) {
+    return service.update(id, request);
+  }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id) {
-        service.delete(id);
-        return ResponseEntity.noContent().build();
-    }
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> delete(@PathVariable UUID id) {
+    service.delete(id);
+    return ResponseEntity.noContent().build();
+  }
 }

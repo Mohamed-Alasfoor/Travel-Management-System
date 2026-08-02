@@ -1,8 +1,18 @@
 package com.travelplan.users;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationContext;
 
 @SpringBootTest
-class UserServiceApplicationTests { @Test void contextLoads() { } }
+class UserServiceApplicationTests {
+  @Autowired ApplicationContext context;
 
+  @Test
+  void contextLoads() {
+    assertThat(context).isNotNull();
+  }
+}

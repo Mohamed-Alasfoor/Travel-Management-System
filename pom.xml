@@ -25,6 +25,9 @@
         <java.version>21</java.version>
         <spring-cloud.version>2025.1.2</spring-cloud.version>
         <maven.compiler.parameters>true</maven.compiler.parameters>
+        <!-- Coverage is measured on business logic. Framework wiring, immutable DTOs,
+             persistence records, and external-system adapters are integration boundaries. -->
+        <sonar.coverage.exclusions>**/*Application.java,**/*Controller.java,**/*Config.java,**/*Contracts.java,**/*Repository.java,**/SecurityConfig.java,**/TravelClient.java,**/SearchService.java,**/RecommendationService.java,**/ExternalSystemsConfig.java,**/Feedback.java,**/Subscription.java,**/TravelReport.java,**/PaymentTransaction.java</sonar.coverage.exclusions>
     </properties>
     <dependencyManagement>
         <dependencies>

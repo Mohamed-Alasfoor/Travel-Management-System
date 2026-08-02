@@ -1,29 +1,290 @@
 package com.travelplan.engagement;
 
-import java.math.BigDecimal; import java.time.LocalDate; import java.util.*; import java.util.stream.Collectors;
-import org.springframework.security.access.AccessDeniedException; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 class EngagementService {
- private final SubscriptionRepository subscriptions; private final FeedbackRepository feedback; private final ReportRepository reports; private final TravelClient travels; private final RecommendationService recommendations;
- EngagementService(SubscriptionRepository s,FeedbackRepository f,ReportRepository r,TravelClient t,RecommendationService rec){subscriptions=s;feedback=f;reports=r;travels=t;recommendations=rec;}
- @Transactional EngagementContracts.SubscriptionResponse subscribe(UUID user,EngagementContracts.SubscribeRequest req,String token){TravelClient.TravelView travel=travels.find(req.travelId(),token);ensureBookingOpen(travel);if(!"PUBLISHED".equals(travel.status()))throw new IllegalArgumentException("Travel is not available.");if(subscriptions.countByTravelIdAndStatus(travel.id(),Subscription.Status.ACTIVE)>=travel.capacity())throw new IllegalStateException("Travel is fully booked.");Subscription s=subscriptions.findByTravelIdAndTravelerId(travel.id(),user).orElse(null);if(s==null)s=new Subscription(travel.id(),user,travel.managerId(),req.paymentProvider(),travel.price());else if(s.status()==Subscription.Status.ACTIVE)throw new IllegalStateException("Already subscribed.");else s.reactivate(req.paymentProvider(),travel.price());recommendations.participated(user,travel);return EngagementContracts.SubscriptionResponse.from(subscriptions.save(s));}
- @Transactional void unsubscribe(UUID travelId,UUID user,String token,boolean managerOrAdmin){TravelClient.TravelView travel=travels.find(travelId,token);ensureBookingOpen(travel);Subscription s=subscriptions.findByTravelIdAndTravelerId(travelId,user).orElseThrow(()->new IllegalArgumentException("Subscription does not exist."));if(!managerOrAdmin&&!s.travelerId().equals(user))throw new AccessDeniedException("Cannot cancel another traveler.");s.cancel();}
- @Transactional void removeSubscriber(UUID travelId,UUID travelerId,UUID actor,boolean admin,String token){TravelClient.TravelView travel=travels.find(travelId,token);if(!admin&&!actor.equals(travel.managerId()))throw new AccessDeniedException("Only the organizing manager can manage subscribers.");unsubscribe(travelId,travelerId,token,true);}
- @Transactional(readOnly=true) List<EngagementContracts.SubscriptionResponse> mine(UUID user){return subscriptions.findByTravelerIdOrderBySubscribedAtDesc(user).stream().map(EngagementContracts.SubscriptionResponse::from).toList();}
- @Transactional(readOnly=true) List<EngagementContracts.SubscriptionResponse> subscribers(UUID travelId,UUID actor,boolean admin,String token){TravelClient.TravelView travel=travels.find(travelId,token);if(!admin&&!actor.equals(travel.managerId()))throw new AccessDeniedException("Only the organizing manager can view subscribers.");return subscriptions.findByTravelIdAndStatus(travelId,Subscription.Status.ACTIVE).stream().map(EngagementContracts.SubscriptionResponse::from).toList();}
- @Transactional EngagementContracts.FeedbackResponse addFeedback(UUID user,EngagementContracts.FeedbackRequest req,String token){TravelClient.TravelView travel=travels.find(req.travelId(),token);Subscription s=subscriptions.findByTravelIdAndTravelerId(req.travelId(),user).filter(x->x.status()==Subscription.Status.ACTIVE).orElseThrow(()->new IllegalStateException("Only participants can leave feedback."));if(!travel.endDate().isBefore(LocalDate.now()))throw new IllegalStateException("Feedback is available after the travel ends.");if(feedback.existsByTravelIdAndTravelerId(req.travelId(),user))throw new IllegalStateException("Feedback already submitted.");Feedback saved=feedback.save(new Feedback(req.travelId(),user,s.managerId(),req.rating(),req.comment().trim()));recommendations.rated(user,travel,req.rating());return EngagementContracts.FeedbackResponse.from(saved);}
- @Transactional(readOnly=true) List<EngagementContracts.FeedbackResponse> feedbackForManager(UUID manager,UUID actor,boolean admin){if(!admin&&!manager.equals(actor))throw new AccessDeniedException("Cannot view another manager's private feedback dashboard.");return feedback.findByManagerIdOrderByCreatedAtDesc(manager).stream().map(EngagementContracts.FeedbackResponse::from).toList();}
- @Transactional EngagementContracts.ReportResponse report(UUID user,EngagementContracts.ReportRequest req){if(user.equals(req.targetId()))throw new IllegalArgumentException("You cannot report yourself.");return EngagementContracts.ReportResponse.from(reports.save(new TravelReport(user,req.targetType(),req.targetId(),req.travelId(),req.reason().trim())));}
- @Transactional(readOnly=true) List<EngagementContracts.ReportResponse> allReports(){return reports.findAll().stream().sorted(Comparator.comparing(TravelReport::createdAt).reversed()).map(EngagementContracts.ReportResponse::from).toList();}
- @Transactional void reviewReport(UUID id,TravelReport.Status status){TravelReport r=reports.findById(id).orElseThrow(()->new IllegalArgumentException("Report does not exist."));r.review(status);}
- @Transactional(readOnly=true) EngagementContracts.TravelerStats travelerStats(UUID user){return travelerStats(user,null);}
- @Transactional(readOnly=true) EngagementContracts.TravelerStats travelerStats(UUID user,String token){List<Subscription>s=subscriptions.findByTravelerIdOrderBySubscribedAtDesc(user);Map<String,Long> providers=s.stream().collect(Collectors.groupingBy(Subscription::provider,Collectors.counting()));String preferred=providers.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("NONE");long past=0;if(token!=null){Map<UUID,TravelClient.TravelView> indexed=Arrays.stream(travels.all(token)).collect(Collectors.toMap(TravelClient.TravelView::id,x->x));past=s.stream().filter(x->x.status()==Subscription.Status.ACTIVE).map(x->indexed.get(x.travelId())).filter(Objects::nonNull).filter(x->x.endDate().isBefore(LocalDate.now())).count();}return new EngagementContracts.TravelerStats(s.size(),s.stream().filter(x->x.status()==Subscription.Status.ACTIVE).count(),past,s.stream().filter(x->x.status()==Subscription.Status.CANCELLED).count(),feedback.countByTravelerId(user),reports.findByReporterIdOrderByCreatedAtDesc(user).size(),preferred);}
- @Transactional(readOnly=true) EngagementContracts.ManagerStats managerStats(UUID manager,String token){List<Subscription>s=subscriptions.findByManagerIdOrderBySubscribedAtDesc(manager);List<Feedback>f=feedback.findByManagerIdOrderByCreatedAtDesc(manager);double avg=f.stream().mapToInt(Feedback::rating).average().orElse(0);BigDecimal income=s.stream().filter(x->x.status()==Subscription.Status.ACTIVE).map(Subscription::amount).reduce(BigDecimal.ZERO,BigDecimal::add);long trips=Arrays.stream(travels.all(token)).filter(t->manager.equals(t.managerId())).count();return new EngagementContracts.ManagerStats(manager,trips,s.stream().filter(x->x.status()==Subscription.Status.ACTIVE).map(Subscription::travelerId).distinct().count(),income,avg,reports.countByTargetId(manager));}
- @Transactional(readOnly=true) List<EngagementContracts.ManagerStats> rankings(String token){return Arrays.stream(travels.all(token)).map(TravelClient.TravelView::managerId).filter(Objects::nonNull).distinct().map(id->managerStats(id,token)).sorted(Comparator.comparing(EngagementContracts.ManagerStats::income).reversed().thenComparing(Comparator.comparing(EngagementContracts.ManagerStats::averageRating).reversed())).toList();}
- @Transactional(readOnly=true) List<EngagementContracts.TravelPerformance> travelRankings(){Map<UUID,List<Subscription>> grouped=subscriptions.findAll().stream().filter(x->x.status()==Subscription.Status.ACTIVE).collect(Collectors.groupingBy(Subscription::travelId));return grouped.entrySet().stream().map(e->{List<Feedback>f=feedback.findByTravelIdOrderByCreatedAtDesc(e.getKey());BigDecimal income=e.getValue().stream().map(Subscription::amount).reduce(BigDecimal.ZERO,BigDecimal::add);return new EngagementContracts.TravelPerformance(e.getKey(),e.getValue().getFirst().managerId(),e.getValue().stream().map(Subscription::travelerId).distinct().count(),income,f.size(),f.stream().mapToInt(Feedback::rating).average().orElse(0));}).sorted(Comparator.comparing(EngagementContracts.TravelPerformance::income).reversed()).toList();}
- @Transactional(readOnly=true) List<EngagementContracts.MonthlyIncome> monthlyIncome(){return subscriptions.findAll().stream().filter(x->x.status()==Subscription.Status.ACTIVE).collect(Collectors.groupingBy(x->java.time.YearMonth.from(x.subscribedAt().atZone(java.time.ZoneOffset.UTC)),Collectors.reducing(BigDecimal.ZERO,Subscription::amount,BigDecimal::add))).entrySet().stream().sorted(Map.Entry.<java.time.YearMonth,BigDecimal>comparingByKey().reversed()).limit(12).map(e->new EngagementContracts.MonthlyIncome(e.getKey().toString(),e.getValue())).toList();}
- @Transactional(readOnly=true) List<EngagementContracts.SubscriptionResponse> history(){return subscriptions.findAll().stream().sorted(Comparator.comparing(Subscription::subscribedAt).reversed()).map(EngagementContracts.SubscriptionResponse::from).toList();}
- @Transactional(readOnly=true) List<EngagementContracts.FeedbackResponse> allFeedback(){return feedback.findAll().stream().sorted(Comparator.comparing(Feedback::createdAt).reversed()).map(EngagementContracts.FeedbackResponse::from).toList();}
- private void ensureBookingOpen(TravelClient.TravelView t){if(!t.startDate().isAfter(LocalDate.now().plusDays(3)))throw new IllegalStateException("Subscriptions close three days before departure.");}
+  private final SubscriptionRepository subscriptions;
+  private final FeedbackRepository feedback;
+  private final ReportRepository reports;
+  private final TravelClient travels;
+  private final RecommendationService recommendations;
+
+  EngagementService(
+      SubscriptionRepository s,
+      FeedbackRepository f,
+      ReportRepository r,
+      TravelClient t,
+      RecommendationService rec) {
+    subscriptions = s;
+    feedback = f;
+    reports = r;
+    travels = t;
+    recommendations = rec;
+  }
+
+  @Transactional
+  EngagementContracts.SubscriptionResponse subscribe(
+      UUID user, EngagementContracts.SubscribeRequest req, String token) {
+    TravelClient.TravelView travel = travels.find(req.travelId(), token);
+    ensureBookingOpen(travel);
+    if (!"PUBLISHED".equals(travel.status()))
+      throw new IllegalArgumentException("Travel is not available.");
+    if (subscriptions.countByTravelIdAndStatus(travel.id(), Subscription.Status.ACTIVE)
+        >= travel.capacity()) throw new IllegalStateException("Travel is fully booked.");
+    Subscription s = subscriptions.findByTravelIdAndTravelerId(travel.id(), user).orElse(null);
+    if (s == null)
+      s =
+          new Subscription(
+              travel.id(), user, travel.managerId(), req.paymentProvider(), travel.price());
+    else if (s.status() == Subscription.Status.ACTIVE)
+      throw new IllegalStateException("Already subscribed.");
+    else s.reactivate(req.paymentProvider(), travel.price());
+    recommendations.participated(user, travel);
+    return EngagementContracts.SubscriptionResponse.from(subscriptions.save(s));
+  }
+
+  @Transactional
+  void unsubscribe(UUID travelId, UUID user, String token, boolean managerOrAdmin) {
+    TravelClient.TravelView travel = travels.find(travelId, token);
+    ensureBookingOpen(travel);
+    Subscription s =
+        subscriptions
+            .findByTravelIdAndTravelerId(travelId, user)
+            .orElseThrow(() -> new IllegalArgumentException("Subscription does not exist."));
+    if (!managerOrAdmin && !s.travelerId().equals(user))
+      throw new AccessDeniedException("Cannot cancel another traveler.");
+    s.cancel();
+  }
+
+  @Transactional
+  void removeSubscriber(UUID travelId, UUID travelerId, UUID actor, boolean admin, String token) {
+    TravelClient.TravelView travel = travels.find(travelId, token);
+    if (!admin && !actor.equals(travel.managerId()))
+      throw new AccessDeniedException("Only the organizing manager can manage subscribers.");
+    unsubscribe(travelId, travelerId, token, true);
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.SubscriptionResponse> mine(UUID user) {
+    return subscriptions.findByTravelerIdOrderBySubscribedAtDesc(user).stream()
+        .map(EngagementContracts.SubscriptionResponse::from)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.SubscriptionResponse> subscribers(
+      UUID travelId, UUID actor, boolean admin, String token) {
+    TravelClient.TravelView travel = travels.find(travelId, token);
+    if (!admin && !actor.equals(travel.managerId()))
+      throw new AccessDeniedException("Only the organizing manager can view subscribers.");
+    return subscriptions.findByTravelIdAndStatus(travelId, Subscription.Status.ACTIVE).stream()
+        .map(EngagementContracts.SubscriptionResponse::from)
+        .toList();
+  }
+
+  @Transactional
+  EngagementContracts.FeedbackResponse addFeedback(
+      UUID user, EngagementContracts.FeedbackRequest req, String token) {
+    TravelClient.TravelView travel = travels.find(req.travelId(), token);
+    Subscription s =
+        subscriptions
+            .findByTravelIdAndTravelerId(req.travelId(), user)
+            .filter(x -> x.status() == Subscription.Status.ACTIVE)
+            .orElseThrow(() -> new IllegalStateException("Only participants can leave feedback."));
+    if (!travel.endDate().isBefore(LocalDate.now()))
+      throw new IllegalStateException("Feedback is available after the travel ends.");
+    if (feedback.existsByTravelIdAndTravelerId(req.travelId(), user))
+      throw new IllegalStateException("Feedback already submitted.");
+    Feedback saved =
+        feedback.save(
+            new Feedback(req.travelId(), user, s.managerId(), req.rating(), req.comment().trim()));
+    recommendations.rated(user, travel, req.rating());
+    return EngagementContracts.FeedbackResponse.from(saved);
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.FeedbackResponse> feedbackForManager(
+      UUID manager, UUID actor, boolean admin) {
+    if (!admin && !manager.equals(actor))
+      throw new AccessDeniedException("Cannot view another manager's private feedback dashboard.");
+    return feedback.findByManagerIdOrderByCreatedAtDesc(manager).stream()
+        .map(EngagementContracts.FeedbackResponse::from)
+        .toList();
+  }
+
+  @Transactional
+  EngagementContracts.ReportResponse report(UUID user, EngagementContracts.ReportRequest req) {
+    if (user.equals(req.targetId()))
+      throw new IllegalArgumentException("You cannot report yourself.");
+    return EngagementContracts.ReportResponse.from(
+        reports.save(
+            new TravelReport(
+                user, req.targetType(), req.targetId(), req.travelId(), req.reason().trim())));
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.ReportResponse> allReports() {
+    return reports.findAll().stream()
+        .sorted(Comparator.comparing(TravelReport::createdAt).reversed())
+        .map(EngagementContracts.ReportResponse::from)
+        .toList();
+  }
+
+  @Transactional
+  void reviewReport(UUID id, TravelReport.Status status) {
+    TravelReport r =
+        reports
+            .findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Report does not exist."));
+    r.review(status);
+  }
+
+  @Transactional(readOnly = true)
+  EngagementContracts.TravelerStats travelerStats(UUID user) {
+    return travelerStats(user, null);
+  }
+
+  @Transactional(readOnly = true)
+  EngagementContracts.TravelerStats travelerStats(UUID user, String token) {
+    List<Subscription> s = subscriptions.findByTravelerIdOrderBySubscribedAtDesc(user);
+    Map<String, Long> providers =
+        s.stream().collect(Collectors.groupingBy(Subscription::provider, Collectors.counting()));
+    String preferred =
+        providers.entrySet().stream()
+            .max(Map.Entry.comparingByValue())
+            .map(Map.Entry::getKey)
+            .orElse("NONE");
+    long past = 0;
+    if (token != null) {
+      Map<UUID, TravelClient.TravelView> indexed =
+          Arrays.stream(travels.all(token))
+              .collect(Collectors.toMap(TravelClient.TravelView::id, x -> x));
+      past =
+          s.stream()
+              .filter(x -> x.status() == Subscription.Status.ACTIVE)
+              .map(x -> indexed.get(x.travelId()))
+              .filter(Objects::nonNull)
+              .filter(x -> x.endDate().isBefore(LocalDate.now()))
+              .count();
+    }
+    return new EngagementContracts.TravelerStats(
+        s.size(),
+        s.stream().filter(x -> x.status() == Subscription.Status.ACTIVE).count(),
+        past,
+        s.stream().filter(x -> x.status() == Subscription.Status.CANCELLED).count(),
+        feedback.countByTravelerId(user),
+        reports.findByReporterIdOrderByCreatedAtDesc(user).size(),
+        preferred);
+  }
+
+  @Transactional(readOnly = true)
+  EngagementContracts.ManagerStats managerStats(UUID manager, String token) {
+    List<Subscription> s = subscriptions.findByManagerIdOrderBySubscribedAtDesc(manager);
+    List<Feedback> f = feedback.findByManagerIdOrderByCreatedAtDesc(manager);
+    double avg = f.stream().mapToInt(Feedback::rating).average().orElse(0);
+    BigDecimal income =
+        s.stream()
+            .filter(x -> x.status() == Subscription.Status.ACTIVE)
+            .map(Subscription::amount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+    long trips =
+        Arrays.stream(travels.all(token)).filter(t -> manager.equals(t.managerId())).count();
+    return new EngagementContracts.ManagerStats(
+        manager,
+        trips,
+        s.stream()
+            .filter(x -> x.status() == Subscription.Status.ACTIVE)
+            .map(Subscription::travelerId)
+            .distinct()
+            .count(),
+        income,
+        avg,
+        reports.countByTargetId(manager));
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.ManagerStats> rankings(String token) {
+    return Arrays.stream(travels.all(token))
+        .map(TravelClient.TravelView::managerId)
+        .filter(Objects::nonNull)
+        .distinct()
+        .map(id -> managerStats(id, token))
+        .sorted(
+            Comparator.comparing(EngagementContracts.ManagerStats::income)
+                .reversed()
+                .thenComparing(
+                    Comparator.comparing(EngagementContracts.ManagerStats::averageRating)
+                        .reversed()))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.TravelPerformance> travelRankings() {
+    Map<UUID, List<Subscription>> grouped =
+        subscriptions.findAll().stream()
+            .filter(x -> x.status() == Subscription.Status.ACTIVE)
+            .collect(Collectors.groupingBy(Subscription::travelId));
+    return grouped.entrySet().stream()
+        .map(
+            e -> {
+              List<Feedback> f = feedback.findByTravelIdOrderByCreatedAtDesc(e.getKey());
+              BigDecimal income =
+                  e.getValue().stream()
+                      .map(Subscription::amount)
+                      .reduce(BigDecimal.ZERO, BigDecimal::add);
+              return new EngagementContracts.TravelPerformance(
+                  e.getKey(),
+                  e.getValue().getFirst().managerId(),
+                  e.getValue().stream().map(Subscription::travelerId).distinct().count(),
+                  income,
+                  f.size(),
+                  f.stream().mapToInt(Feedback::rating).average().orElse(0));
+            })
+        .sorted(Comparator.comparing(EngagementContracts.TravelPerformance::income).reversed())
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.MonthlyIncome> monthlyIncome() {
+    return subscriptions.findAll().stream()
+        .filter(x -> x.status() == Subscription.Status.ACTIVE)
+        .collect(
+            Collectors.groupingBy(
+                x -> java.time.YearMonth.from(x.subscribedAt().atZone(java.time.ZoneOffset.UTC)),
+                Collectors.reducing(BigDecimal.ZERO, Subscription::amount, BigDecimal::add)))
+        .entrySet()
+        .stream()
+        .sorted(Map.Entry.<java.time.YearMonth, BigDecimal>comparingByKey().reversed())
+        .limit(12)
+        .map(e -> new EngagementContracts.MonthlyIncome(e.getKey().toString(), e.getValue()))
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.SubscriptionResponse> history() {
+    return subscriptions.findAll().stream()
+        .sorted(Comparator.comparing(Subscription::subscribedAt).reversed())
+        .map(EngagementContracts.SubscriptionResponse::from)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  List<EngagementContracts.FeedbackResponse> allFeedback() {
+    return feedback.findAll().stream()
+        .sorted(Comparator.comparing(Feedback::createdAt).reversed())
+        .map(EngagementContracts.FeedbackResponse::from)
+        .toList();
+  }
+
+  private void ensureBookingOpen(TravelClient.TravelView t) {
+    if (!t.startDate().isAfter(LocalDate.now().plusDays(3)))
+      throw new IllegalStateException("Subscriptions close three days before departure.");
+  }
 }

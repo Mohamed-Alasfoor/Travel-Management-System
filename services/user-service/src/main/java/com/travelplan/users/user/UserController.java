@@ -15,34 +15,53 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
-    private final UserService service;
-    public UserController(UserService service) { this.service = service; }
+  private final UserService service;
 
-    @GetMapping public List<Response> findAll() { return service.findAll(); }
-    @GetMapping("/me")
-    public Response me(@org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
-        return service.find(UUID.fromString(jwt.getSubject()));
-    }
-    @GetMapping("/{id}") public Response find(@PathVariable UUID id) { return service.find(id); }
+  public UserController(UserService service) {
+    this.service = service;
+  }
 
-    @PostMapping
-    public ResponseEntity<Response> create(@Valid @RequestBody CreateRequest request) {
-        Response created = service.create(request);
-        return ResponseEntity.created(URI.create("/api/users/" + created.id())).body(created);
-    }
+  @GetMapping
+  public List<Response> findAll() {
+    return service.findAll();
+  }
 
-    @PutMapping("/{id}")
-    public Response update(@PathVariable UUID id, @Valid @RequestBody UpdateRequest request, @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
-        return service.update(id, request, UUID.fromString(jwt.getSubject()));
-    }
+  @GetMapping("/me")
+  public Response me(
+      @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
+    return service.find(UUID.fromString(jwt.getSubject()));
+  }
 
-    @PutMapping("/{id}/password")
-    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
-    public void changePassword(@PathVariable UUID id, @Valid @RequestBody PasswordRequest request) { service.changePassword(id, request); }
+  @GetMapping("/{id}")
+  public Response find(@PathVariable UUID id) {
+    return service.find(id);
+  }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable UUID id, @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
-        service.delete(id, UUID.fromString(jwt.getSubject()));
-        return ResponseEntity.noContent().build();
-    }
+  @PostMapping
+  public ResponseEntity<Response> create(@Valid @RequestBody CreateRequest request) {
+    Response created = service.create(request);
+    return ResponseEntity.created(URI.create("/api/users/" + created.id())).body(created);
+  }
+
+  @PutMapping("/{id}")
+  public Response update(
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateRequest request,
+      @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
+    return service.update(id, request, UUID.fromString(jwt.getSubject()));
+  }
+
+  @PutMapping("/{id}/password")
+  @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+  public void changePassword(@PathVariable UUID id, @Valid @RequestBody PasswordRequest request) {
+    service.changePassword(id, request);
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> delete(
+      @PathVariable UUID id,
+      @org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
+    service.delete(id, UUID.fromString(jwt.getSubject()));
+    return ResponseEntity.noContent().build();
+  }
 }
