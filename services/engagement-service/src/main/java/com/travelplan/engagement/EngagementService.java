@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-class EngagementService {
+public class EngagementService {
   private final SubscriptionRepository subscriptions;
   private final FeedbackRepository feedback;
   private final ReportRepository reports;
@@ -30,7 +30,7 @@ class EngagementService {
   }
 
   @Transactional
-  EngagementContracts.SubscriptionResponse subscribe(
+  public EngagementContracts.SubscriptionResponse subscribe(
       UUID user, EngagementContracts.SubscribeRequest req, String token) {
     TravelClient.TravelView travel = travels.find(req.travelId(), token);
     ensureBookingOpen(travel);
@@ -51,7 +51,7 @@ class EngagementService {
   }
 
   @Transactional
-  void unsubscribe(UUID travelId, UUID user, String token, boolean managerOrAdmin) {
+  public void unsubscribe(UUID travelId, UUID user, String token, boolean managerOrAdmin) {
     TravelClient.TravelView travel = travels.find(travelId, token);
     ensureBookingOpen(travel);
     Subscription s =
@@ -64,7 +64,7 @@ class EngagementService {
   }
 
   @Transactional
-  void removeSubscriber(UUID travelId, UUID travelerId, UUID actor, boolean admin, String token) {
+  public void removeSubscriber(UUID travelId, UUID travelerId, UUID actor, boolean admin, String token) {
     TravelClient.TravelView travel = travels.find(travelId, token);
     if (!admin && !actor.equals(travel.managerId()))
       throw new AccessDeniedException("Only the organizing manager can manage subscribers.");
@@ -72,14 +72,14 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.SubscriptionResponse> mine(UUID user) {
+  public List<EngagementContracts.SubscriptionResponse> mine(UUID user) {
     return subscriptions.findByTravelerIdOrderBySubscribedAtDesc(user).stream()
         .map(EngagementContracts.SubscriptionResponse::from)
         .toList();
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.SubscriptionResponse> subscribers(
+  public List<EngagementContracts.SubscriptionResponse> subscribers(
       UUID travelId, UUID actor, boolean admin, String token) {
     TravelClient.TravelView travel = travels.find(travelId, token);
     if (!admin && !actor.equals(travel.managerId()))
@@ -90,7 +90,7 @@ class EngagementService {
   }
 
   @Transactional
-  EngagementContracts.FeedbackResponse addFeedback(
+  public EngagementContracts.FeedbackResponse addFeedback(
       UUID user, EngagementContracts.FeedbackRequest req, String token) {
     TravelClient.TravelView travel = travels.find(req.travelId(), token);
     Subscription s =
@@ -110,7 +110,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.FeedbackResponse> feedbackForManager(
+  public List<EngagementContracts.FeedbackResponse> feedbackForManager(
       UUID manager, UUID actor, boolean admin) {
     if (!admin && !manager.equals(actor))
       throw new AccessDeniedException("Cannot view another manager's private feedback dashboard.");
@@ -120,7 +120,7 @@ class EngagementService {
   }
 
   @Transactional
-  EngagementContracts.ReportResponse report(UUID user, EngagementContracts.ReportRequest req) {
+  public EngagementContracts.ReportResponse report(UUID user, EngagementContracts.ReportRequest req) {
     if (user.equals(req.targetId()))
       throw new IllegalArgumentException("You cannot report yourself.");
     return EngagementContracts.ReportResponse.from(
@@ -130,7 +130,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.ReportResponse> allReports() {
+  public List<EngagementContracts.ReportResponse> allReports() {
     return reports.findAll().stream()
         .sorted(Comparator.comparing(TravelReport::createdAt).reversed())
         .map(EngagementContracts.ReportResponse::from)
@@ -138,7 +138,7 @@ class EngagementService {
   }
 
   @Transactional
-  void reviewReport(UUID id, TravelReport.Status status) {
+  public void reviewReport(UUID id, TravelReport.Status status) {
     TravelReport r =
         reports
             .findById(id)
@@ -147,12 +147,12 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  EngagementContracts.TravelerStats travelerStats(UUID user) {
+  public EngagementContracts.TravelerStats travelerStats(UUID user) {
     return travelerStats(user, null);
   }
 
   @Transactional(readOnly = true)
-  EngagementContracts.TravelerStats travelerStats(UUID user, String token) {
+  public EngagementContracts.TravelerStats travelerStats(UUID user, String token) {
     List<Subscription> s = subscriptions.findByTravelerIdOrderBySubscribedAtDesc(user);
     Map<String, Long> providers =
         s.stream().collect(Collectors.groupingBy(Subscription::provider, Collectors.counting()));
@@ -185,7 +185,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  EngagementContracts.ManagerStats managerStats(UUID manager, String token) {
+  public EngagementContracts.ManagerStats managerStats(UUID manager, String token) {
     List<Subscription> s = subscriptions.findByManagerIdOrderBySubscribedAtDesc(manager);
     List<Feedback> f = feedback.findByManagerIdOrderByCreatedAtDesc(manager);
     double avg = f.stream().mapToInt(Feedback::rating).average().orElse(0);
@@ -210,7 +210,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.ManagerStats> rankings(String token) {
+  public List<EngagementContracts.ManagerStats> rankings(String token) {
     return Arrays.stream(travels.all(token))
         .map(TravelClient.TravelView::managerId)
         .filter(Objects::nonNull)
@@ -226,7 +226,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.TravelPerformance> travelRankings() {
+  public List<EngagementContracts.TravelPerformance> travelRankings() {
     Map<UUID, List<Subscription>> grouped =
         subscriptions.findAll().stream()
             .filter(x -> x.status() == Subscription.Status.ACTIVE)
@@ -252,7 +252,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.MonthlyIncome> monthlyIncome() {
+  public List<EngagementContracts.MonthlyIncome> monthlyIncome() {
     return subscriptions.findAll().stream()
         .filter(x -> x.status() == Subscription.Status.ACTIVE)
         .collect(
@@ -268,7 +268,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.SubscriptionResponse> history() {
+  public List<EngagementContracts.SubscriptionResponse> history() {
     return subscriptions.findAll().stream()
         .sorted(Comparator.comparing(Subscription::subscribedAt).reversed())
         .map(EngagementContracts.SubscriptionResponse::from)
@@ -276,7 +276,7 @@ class EngagementService {
   }
 
   @Transactional(readOnly = true)
-  List<EngagementContracts.FeedbackResponse> allFeedback() {
+  public List<EngagementContracts.FeedbackResponse> allFeedback() {
     return feedback.findAll().stream()
         .sorted(Comparator.comparing(Feedback::createdAt).reversed())
         .map(EngagementContracts.FeedbackResponse::from)

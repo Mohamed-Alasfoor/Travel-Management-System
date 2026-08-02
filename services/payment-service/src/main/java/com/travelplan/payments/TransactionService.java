@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-class TransactionService {
+public class TransactionService {
   private final PaymentTransactionRepository transactions;
   private final PaymentMethodRepository methods;
 
@@ -15,7 +15,7 @@ class TransactionService {
   }
 
   @Transactional
-  TransactionContracts.Response charge(UUID traveler, TransactionContracts.ChargeRequest request) {
+  public TransactionContracts.Response charge(UUID traveler, TransactionContracts.ChargeRequest request) {
     return transactions
         .findByIdempotencyKey(request.idempotencyKey())
         .map(TransactionContracts.Response::from)
@@ -46,14 +46,14 @@ class TransactionService {
   }
 
   @Transactional(readOnly = true)
-  List<TransactionContracts.Response> mine(UUID traveler) {
+  public List<TransactionContracts.Response> mine(UUID traveler) {
     return transactions.findByTravelerIdOrderByCreatedAtDesc(traveler).stream()
         .map(TransactionContracts.Response::from)
         .toList();
   }
 
   @Transactional(readOnly = true)
-  List<TransactionContracts.Response> all() {
+  public List<TransactionContracts.Response> all() {
     return transactions.findAll().stream().map(TransactionContracts.Response::from).toList();
   }
 }
