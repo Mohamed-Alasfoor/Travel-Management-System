@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -97,6 +98,8 @@ public class SecurityConfig {
                         "/actuator/prometheus")
                     .permitAll()
                     .requestMatchers("/api/users/me")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/users/*/public")
                     .authenticated()
                     .requestMatchers("/api/users/**")
                     .hasRole("ADMIN")

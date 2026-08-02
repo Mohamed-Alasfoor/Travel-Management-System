@@ -36,5 +36,10 @@ public final class UserContracts {
                     user.isEnabled(), user.getCreatedAt(), user.getUpdatedAt());
         }
     }
-}
 
+    public record PublicProfile(UUID id, String displayName, Role role) {
+        static PublicProfile from(Response user) {
+            return new PublicProfile(user.id(), user.displayName(), user.role());
+        }
+    }
+}

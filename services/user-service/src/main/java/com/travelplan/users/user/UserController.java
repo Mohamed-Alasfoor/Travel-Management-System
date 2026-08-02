@@ -32,6 +32,11 @@ public class UserController {
     return service.find(UUID.fromString(jwt.getSubject()));
   }
 
+  @GetMapping("/{id}/public")
+  public UserContracts.PublicProfile publicProfile(@PathVariable UUID id) {
+    return UserContracts.PublicProfile.from(service.find(id));
+  }
+
   @GetMapping("/{id}")
   public Response find(@PathVariable UUID id) {
     return service.find(id);

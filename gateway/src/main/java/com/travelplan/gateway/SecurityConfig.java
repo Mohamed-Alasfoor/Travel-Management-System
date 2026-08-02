@@ -45,6 +45,7 @@ class SecurityConfig {
                 .authorizeExchange(exchange -> exchange
                         .pathMatchers("/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest", "/api/auth/login", "/actuator/health/**", "/actuator/info").permitAll()
                         .pathMatchers("/api/users/me").authenticated()
+                        .pathMatchers(HttpMethod.GET, "/api/users/*/public").authenticated()
                         .pathMatchers("/api/users/**", "/api/payment-methods/**").hasRole("ADMIN")
                         .pathMatchers("/api/payments/**").authenticated()
                         .pathMatchers(HttpMethod.GET, "/api/travels/**").authenticated()
