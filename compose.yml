@@ -9,6 +9,7 @@ services:
       USER_SERVICE_URL: http://user-service:8081
       TRAVEL_SERVICE_URL: http://travel-service:8082
       PAYMENT_SERVICE_URL: http://payment-service:8083
+      ENGAGEMENT_SERVICE_URL: http://engagement-service:8084
       VAULT_URI: http://vault:8200
       VAULT_CONFIG_IMPORT: vault://
       VAULT_ENABLED: "true"
@@ -18,6 +19,7 @@ services:
       user-service: { condition: service_healthy }
       travel-service: { condition: service_healthy }
       payment-service: { condition: service_healthy }
+      engagement-service: { condition: service_healthy }
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 10s
@@ -81,6 +83,29 @@ services:
     deploy:
       replicas: 2
 
+  engagement-service:
+    build: { context: ., dockerfile: services/engagement-service/Dockerfile }
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/engagement_db
+      TRAVEL_SERVICE_URL: http://travel-service:8082
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_AUTH: ${NEO4J_AUTH:-neo4j/neo4j_dev_only}
+      VAULT_URI: http://vault:8200
+      VAULT_CONFIG_IMPORT: vault://
+      VAULT_ENABLED: "true"
+      VAULT_TOKEN: ${VAULT_DEV_ROOT_TOKEN:-local-development-root-token}
+    depends_on:
+      postgres: { condition: service_healthy }
+      neo4j: { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+      vault-init: { condition: service_completed_successfully }
+    healthcheck:
+      <<: *service-health
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+    networks: [internal]
+    deploy: { replicas: 2 }
+
   postgres:
     image: postgres:17-alpine
     environment:
@@ -109,6 +134,20 @@ services:
       retries: 15
     networks: [internal]
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.4
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    volumes: [elasticsearch-data:/usr/share/elasticsearch/data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks: [internal]
+
   vault:
     image: hashicorp/vault:1.20
     cap_add: [IPC_LOCK]
@@ -133,13 +172,17 @@ services:
       BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-admin@example.com}
       BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-admin123}
       BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-System Administrator}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sandbox-not-configured}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-sandbox-not-configured}
+      PAYPAL_CLIENT_SECRET: ${PAYPAL_CLIENT_SECRET:-sandbox-not-configured}
     entrypoint: ["/bin/sh", "-ec"]
     command:
       - |
         vault kv put secret/gateway app.security.jwt-secret="$$JWT_SECRET"
         vault kv put secret/user-service spring.datasource.username=users_app spring.datasource.password=users_dev_only app.security.jwt-secret="$$JWT_SECRET" app.bootstrap-admin.email="$$BOOTSTRAP_ADMIN_EMAIL" app.bootstrap-admin.password="$$BOOTSTRAP_ADMIN_PASSWORD" app.bootstrap-admin.name="$$BOOTSTRAP_ADMIN_NAME"
-        vault kv put secret/travel-service spring.datasource.username=travels_app spring.datasource.password=travels_dev_only
-        vault kv put secret/payment-service spring.datasource.username=payments_app spring.datasource.password=payments_dev_only
+        vault kv put secret/travel-service spring.datasource.username=travels_app spring.datasource.password=travels_dev_only app.security.jwt-secret="$$JWT_SECRET"
+        vault kv put secret/payment-service spring.datasource.username=payments_app spring.datasource.password=payments_dev_only app.security.jwt-secret="$$JWT_SECRET" app.payments.stripe-secret-key="$$STRIPE_SECRET_KEY" app.payments.paypal-client-id="$$PAYPAL_CLIENT_ID" app.payments.paypal-client-secret="$$PAYPAL_CLIENT_SECRET"
+        vault kv put secret/engagement-service spring.datasource.username=engagement_app spring.datasource.password=engagement_dev_only app.security.jwt-secret="$$JWT_SECRET"
     depends_on:
       vault: { condition: service_healthy }
     restart: "no"
@@ -192,5 +235,6 @@ networks:
 volumes:
   postgres-data: {}
   neo4j-data: {}
+  elasticsearch-data: {}
   grafana-data: {}
   loki-data: {}

@@ -24,6 +24,11 @@ spring:
 server:
   address: 0.0.0.0
   port: ${SERVER_PORT:8083}
+app.security.jwt-secret: ${JWT_SECRET:dev-only-secret-must-be-at-least-32-bytes-long}
+app.payments:
+  stripe-secret-key: ${STRIPE_SECRET_KEY:sandbox-not-configured}
+  paypal-client-id: ${PAYPAL_CLIENT_ID:sandbox-not-configured}
+  paypal-client-secret: ${PAYPAL_CLIENT_SECRET:sandbox-not-configured}
 management:
   endpoints:
     web:

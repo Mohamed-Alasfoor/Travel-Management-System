@@ -19,6 +19,7 @@
         <module>services/user-service</module>
         <module>services/travel-service</module>
         <module>services/payment-service</module>
+        <module>services/engagement-service</module>
     </modules>
     <properties>
         <java.version>21</java.version>

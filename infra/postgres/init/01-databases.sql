@@ -5,3 +5,5 @@ CREATE DATABASE users_db OWNER users_app;
 CREATE DATABASE travels_db OWNER travels_app;
 CREATE DATABASE payments_db OWNER payments_app;
 
+CREATE USER engagement_app WITH PASSWORD 'engagement_dev_only';
+CREATE DATABASE engagement_db OWNER engagement_app;

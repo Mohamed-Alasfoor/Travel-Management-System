@@ -21,3 +21,7 @@ updates:
     directory: "/services/payment-service"
     schedule:
       interval: weekly
+  - package-ecosystem: docker
+    directory: "/services/engagement-service"
+    schedule:
+      interval: weekly

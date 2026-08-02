@@ -19,6 +19,10 @@ public class UserController {
     public UserController(UserService service) { this.service = service; }
 
     @GetMapping public List<Response> findAll() { return service.findAll(); }
+    @GetMapping("/me")
+    public Response me(@org.springframework.security.core.annotation.AuthenticationPrincipal Jwt jwt) {
+        return service.find(UUID.fromString(jwt.getSubject()));
+    }
     @GetMapping("/{id}") public Response find(@PathVariable UUID id) { return service.find(id); }
 
     @PostMapping

@@ -5,6 +5,7 @@ COPY gateway/pom.xml gateway/pom.xml
 COPY services/user-service/pom.xml services/user-service/pom.xml
 COPY services/travel-service/pom.xml services/travel-service/pom.xml
 COPY services/payment-service/pom.xml services/payment-service/pom.xml
+COPY services/engagement-service/pom.xml services/engagement-service/pom.xml
 RUN mvn -pl services/user-service -am dependency:go-offline
 COPY services/user-service/src services/user-service/src
 RUN mvn -pl services/user-service -am package -DskipTests
@@ -14,4 +15,3 @@ USER travelplan
 COPY --from=build /workspace/services/user-service/target/user-service-*.jar /app.jar
 EXPOSE 8081
 ENTRYPOINT ["java", "-jar", "/app.jar"]
-

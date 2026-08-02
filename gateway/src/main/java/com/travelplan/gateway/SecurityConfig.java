@@ -14,6 +14,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.http.HttpMethod;
 
 @Configuration
 class SecurityConfig {
@@ -42,8 +43,14 @@ class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchange -> exchange
-                        .pathMatchers("/", "/index.html", "/api/auth/login", "/actuator/health/**", "/actuator/info").permitAll()
-                        .pathMatchers("/api/users/**", "/api/travels/**", "/api/payment-methods/**").hasRole("ADMIN")
+                        .pathMatchers("/", "/index.html", "/styles.css", "/app.js", "/manifest.webmanifest", "/api/auth/login", "/actuator/health/**", "/actuator/info").permitAll()
+                        .pathMatchers("/api/users/me").authenticated()
+                        .pathMatchers("/api/users/**", "/api/payment-methods/**").hasRole("ADMIN")
+                        .pathMatchers("/api/payments/**").authenticated()
+                        .pathMatchers(HttpMethod.GET, "/api/travels/**").authenticated()
+                        .pathMatchers("/api/travels/**").hasAnyRole("ADMIN", "TRAVEL_MANAGER")
+                        .pathMatchers("/api/subscriptions/**", "/api/feedback/**", "/api/reports/**",
+                                "/api/statistics/**", "/api/rankings/**", "/api/search/**", "/api/recommendations/**").authenticated()
                         .pathMatchers("/actuator/prometheus").permitAll()
                         .anyExchange().denyAll())
                 .oauth2ResourceServer(resource -> resource.jwt(jwt -> jwt

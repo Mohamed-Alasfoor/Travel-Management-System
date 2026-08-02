@@ -1,0 +1,4 @@
+ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_role;
+UPDATE users SET role = 'TRAVELER' WHERE role = 'USER';
+ALTER TABLE users ADD CONSTRAINT ck_users_role
+    CHECK (role IN ('ADMIN', 'TRAVEL_MANAGER', 'TRAVELER'));

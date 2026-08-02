@@ -49,7 +49,7 @@ class UserServiceTests {
     @Test
     void duplicateEmailIsRejectedBeforePasswordIsStored() {
         UserContracts.CreateRequest request = new UserContracts.CreateRequest(
-                "existing@example.com", "Existing User", "StrongPassword1!", Role.USER, true);
+                "existing@example.com", "Existing User", "StrongPassword1!", Role.TRAVELER, true);
         when(repository.existsByEmailIgnoreCase("existing@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> service.create(request)).isInstanceOf(ConflictException.class);

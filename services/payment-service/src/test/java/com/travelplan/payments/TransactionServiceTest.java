@@ -1,0 +1,7 @@
+package com.travelplan.payments;
+import static org.assertj.core.api.Assertions.*;import static org.mockito.Mockito.*;import java.math.BigDecimal;import java.util.*;import org.junit.jupiter.api.*;
+class TransactionServiceTest {
+ PaymentTransactionRepository transactions=mock(PaymentTransactionRepository.class);PaymentMethodRepository methods=mock(PaymentMethodRepository.class);TransactionService service=new TransactionService(transactions,methods);
+ @Test void chargesThroughEnabledStripeProviderWithoutStoringCardData(){UUID traveler=UUID.randomUUID(),travel=UUID.randomUUID();when(methods.findAll()).thenReturn(List.of(new PaymentMethod("Stripe","STRIPE",true)));when(transactions.findByIdempotencyKey("booking-1")).thenReturn(Optional.empty());when(transactions.save(any())).thenAnswer(i->i.getArgument(0));var response=service.charge(traveler,new TransactionContracts.ChargeRequest(travel,"STRIPE",new BigDecimal("99.95"),"USD","booking-1"));assertThat(response.status()).isEqualTo("SUCCEEDED");assertThat(response.providerReference()).startsWith("stripe_sandbox_");}
+ @Test void idempotencyPreventsDuplicateCharge(){PaymentTransaction existing=new PaymentTransaction(UUID.randomUUID(),UUID.randomUUID(),"PAYPAL",BigDecimal.TEN,"USD","same-key","paypal_sandbox_existing");when(transactions.findByIdempotencyKey("same-key")).thenReturn(Optional.of(existing));service.charge(existing.travelerId(),new TransactionContracts.ChargeRequest(existing.travelId(),"PAYPAL",BigDecimal.TEN,"USD","same-key"));verify(transactions,never()).save(any());}
+}

@@ -24,6 +24,9 @@ spring:
 server:
   address: 0.0.0.0
   port: ${SERVER_PORT:8082}
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:dev-only-secret-must-be-at-least-32-bytes-long}
 management:
   endpoints:
     web:

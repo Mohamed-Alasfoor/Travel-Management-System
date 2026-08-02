@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:engagement;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa.hibernate.ddl-auto: validate
+  flyway.enabled: true
+  autoconfigure.exclude:
+    - org.springframework.cloud.vault.config.VaultAutoConfiguration
+    - org.springframework.cloud.vault.config.VaultReactiveAutoConfiguration
+app:
+  security.jwt-secret: test-secret-that-is-at-least-thirty-two-bytes-long
+  travel-service-url: http://localhost:8082
+  elasticsearch-url: http://localhost:9200
+  neo4j-uri: bolt://localhost:7687
+  neo4j-auth: neo4j/test-password
