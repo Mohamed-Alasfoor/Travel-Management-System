@@ -9,7 +9,7 @@ pipeline {
         stage('SonarQube') {
             steps {
                 withSonarQubeEnv('sonarqube') {
-                    sh 'mvn --batch-mode sonar:sonar'
+                    sh 'mvn --batch-mode sonar:sonar -Dsonar.projectKey=travel-plan -Dsonar.projectName="Travel Management System"'
                 }
             }
         }
